@@ -14,6 +14,9 @@ module.exports.Component = registerComponent('sound', {
     loop: {default: false},
     maxDistance: {default: 10000},
     on: {default: ''},
+    startEvents: {type: 'array'},
+    pauseEvents: {type: 'array'},
+    stopEvents: {type: 'array'},
     poolSize: {default: 1},
     positional: {default: true},
     refDistance: {default: 1},
@@ -37,6 +40,8 @@ module.exports.Component = registerComponent('sound', {
 
     // Don't pass evt because playSound takes a function as parameter.
     this.playSoundBound = function () { self.playSound(); };
+    this.pauseSoundBound = function () { self.pauseSound(); };
+    this.stopSoundBound = function () { self.stopSound(); };
   },
 
   update: function (oldData) {
@@ -64,8 +69,28 @@ module.exports.Component = registerComponent('sound', {
       sound.isPaused = false;
     }
 
-    if (data.on !== oldData.on) {
-      this.updateEventListener(oldData.on);
+    // Compare start, pause, stop events
+    var eventArr = ['startEvents', 'pauseEvents', 'stopEvents'];
+    this.eventsDiffer = false;
+    eventArr.forEach((eventArray) => {
+      // already found differences - move along
+      if (this.eventsDiffer) {
+        return;
+      }
+
+      // compare elements in all event arrays
+      data[eventArray].every(eventName => {
+        if (oldData[eventArray] && oldData[eventArray].includes(eventName)) {
+          this.eventsDiffer = true;
+          return;
+        }
+      });
+    });
+
+    // if differences were found, or if the 'on' event differs
+    if (this.eventsDiffer || data.on !== oldData.on) {
+      this.updateEventListeners(oldData.on);
+      this.eventsDiffer = false;
     }
 
     // All sound values set. Load in `src`.
@@ -95,7 +120,7 @@ module.exports.Component = registerComponent('sound', {
 
   play: function () {
     if (this.data.autoplay) { this.playSound(); }
-    this.updateEventListener();
+    this.updateEventListeners();
   },
 
   remove: function () {
@@ -122,14 +147,30 @@ module.exports.Component = registerComponent('sound', {
   /**
   *  Update listener attached to the user defined on event.
   */
-  updateEventListener: function (oldEvt) {
+  updateEventListeners: function (oldEvt) {
     var el = this.el;
-    if (oldEvt) { el.removeEventListener(oldEvt, this.playSoundBound); }
+    var data = this.data;
+    if (this.eventsDiffer) {
+      if (oldEvt) { el.removeEventListener(oldEvt, this.playSoundBound); }
+      el.removeEventListeners();
+    }
     el.addEventListener(this.data.on, this.playSoundBound);
+    addEventListeners(el, data.startEvents, this.playSoundBound);
+    addEventListeners(el, data.pauseEvents, this.pauseSoundBound);
+    addEventListeners(el, data.stopEvents, this.stopSoundBound);
   },
 
   removeEventListener: function () {
     this.el.removeEventListener(this.data.on, this.playSoundBound);
+    removeEventListeners();
+  },
+
+  removeEventListeners: function () {
+    var el = this.el;
+    var data = this.data;
+    removeEventListeners(el, data.startEvents, this.playSoundBound);
+    removeEventListeners(el, data.pauseEvents, this.pauseSoundBound);
+    removeEventListeners(el, data.stopEvents, this.stopSoundBound);
   },
 
   /**
@@ -188,7 +229,6 @@ module.exports.Component = registerComponent('sound', {
   pauseSound: function () {
     var i;
     var sound;
-
     this.isPlaying = false;
     for (i = 0; i < this.pool.children.length; i++) {
       sound = this.pool.children[i];
@@ -250,3 +290,23 @@ module.exports.Component = registerComponent('sound', {
     }
   }
 });
+
+/**
+ * Iterate through the event names, and add listeners.
+ */
+function addEventListeners (el, eventNames, handler) {
+  var i;
+  for (i = 0; i < eventNames.length; i++) {
+    el.addEventListener(eventNames[i], handler);
+  }
+}
+
+/**
+ * Iterate through the event names, and add listeners.
+ */
+function removeEventListeners (el, eventNames, handler) {
+  var i;
+  for (i = 0; i < eventNames.length; i++) {
+    el.removeEventListener(eventNames[i], handler);
+  }
+}
