@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Sound Events</title>
+    <meta name="description" content="Sound Events - A-Frame">
+    <script src="../../../dist/aframe-master.js"></script>
+    <script>
+      AFRAME.registerComponent("start-pause", {
+        schema: {
+          set: {}
+        },
+        init: function() {
+          var play = false
+          var soundEl = document.getElementById("soundEl")
+          this.el.addEventListener("click", (e)=>{
+            var eventName = this.data.set.concat(!play ? 'Start' : 'Pause')
+            var color = !play ? "green" : "yellow"
+            this.el.setAttribute('color', color)
+            soundEl.emit(eventName)
+            play = !play
+          })
+        }
+      })
+      AFRAME.registerComponent("stop", {
+        init: function() {
+          var soundEl = document.getElementById("soundEl")
+          this.el.addEventListener("click", (e)=>{
+            soundEl.emit("stop")
+          })
+        }
+      })
+    </script>
+  </head>
+  <body>
+    <a-scene stats cursor='rayOrigin: mouse'>
+      <a-assets>
+          <audio id="chopin"src="https://upload.wikimedia.org/wikipedia/commons/c/ca/Chopin.Nocturne.Es-Dur.opus.9.2.ogg" preload="auto" ></audio>
+      </a-assets>
+      <a-entity id="soundEl" sound="src: #chopin; startEvents: firstStart, secondStart; 
+      pauseEvents: firstPause, secondPause; stopEvents: stop">
+        <a-entity position='0 2.5 -2'>
+        <a-text position='0.4 0.2 0' color="black" value="First set of events - play/pause"></a-text>
+            <a-box scale="0.5 0.5 0.5" color="yellow" start-pause="set: first"> </a-box>
+        </a-entity>
+
+        <a-entity position='0 2 -2'>
+        <a-text position='0.4 0.2 0'color="black" value="Second set of events - play/pause"></a-text>
+            <a-box scale="0.5 0.5 0.5" color="yellow" start-pause="set: second"> </a-box>
+        </a-entity>
+
+        <a-entity position='0 1 -2'>
+        <a-text position='0.4 0.2 0'color="black" value="Stop."></a-text>
+            <a-box scale="0.5 0.5 0.5" color="red" stop> </a-box>
+        </a-entity>
+    </a-scene>
+  </body>
+</html>
